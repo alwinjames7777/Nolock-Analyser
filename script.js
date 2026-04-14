@@ -135,7 +135,36 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Fake Scan Simulation
+// File Upload Logic
+document.getElementById('sql-file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        textarea.value = e.target.result;
+        updateLineNumbers();
+    };
+    reader.readAsText(file);
+});
+
+// Line Jumping Logic
+window.scrollToLine = function(lineNum) {
+    const lines = textarea.value.split('\n');
+    let startPos = 0;
+    for (let i = 0; i < lineNum - 1; i++) {
+        startPos += lines[i].length + 1;
+    }
+    let endPos = startPos + lines[lineNum - 1].length;
+    
+    textarea.focus();
+    textarea.setSelectionRange(startPos, endPos);
+    
+    // Crude scroll height calculation
+    const lineHeight = 24;
+    textarea.scrollTop = Math.max(0, (lineNum - 3) * lineHeight);
+};
+
+// Real Scan Logic
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
     
@@ -144,56 +173,69 @@ form.addEventListener('submit', async (e) => {
     
     if (!dialect || !script.trim()) return;
     
-    // Disable button
     scanBtn.disabled = true;
     scanBtn.innerHTML = '<span class="btn-content"><i class="fa-solid fa-spinner fa-spin"></i> SCANNING...</span>';
     
     terminalOutput.innerHTML = '';
-    appendToTerminal(`<div class="sys-msg">> Initializing Anti-Gravity SQL Scan...</div>`);
-    
-    await sleep(600);
-    appendToTerminal(`<div class="log-info">[INFO] Dialect selected: ${dialect}</div>`);
-    await sleep(400);
     
     let nolockReplacement = "WITH (NOLOCK)";
     if (dialect === "DB2") nolockReplacement = "WITH UR";
-    else if (dialect !== "T-SQL") {
-        appendToTerminal(`<div class="log-warning">[WARN] Note: PostgreSQL, MySQL, Oracle, SQLite do not natively use NOLOCK inside FROM. Applying Dialect Mode.</div>`);
-    }
-
-    typeText("Analyzing AST structure...", "sys-msg", 30, async () => {
-        await sleep(500);
-        appendToTerminal(`<div class="log-success">[OK] Syntax Tree Parsed successfully.</div>`);
-        await sleep(300);
+    
+    const lines = script.split('\n');
+    let findings = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        let lineUpper = line.toUpperCase();
         
-        typeText("Detecting missing table hints...", "sys-msg", 20, async () => {
-            await sleep(800);
-            
-            // Simulate findings
-            appendToTerminal(`<div class="log-header">## SUMMARY</div>`);
-            appendToTerminal(`<div class="sys-msg">- SQL Dialect     : ${dialect}</div>`);
-            appendToTerminal(`<div class="sys-msg">- Total Lines     : ${script.split('\n').length}</div>`);
-            appendToTerminal(`<div class="sys-msg">- Missing NOLOCK  : <span style="color:#f85149; font-weight:bold;">1</span></div>`);
-            
-            await sleep(500);
-            appendToTerminal(`<div class="log-header">## FINDINGS</div>`);
-            appendToTerminal(`<div class="log-error">Finding #1</div>`);
+        // Basic skip conditions
+        if (line.trim().startsWith('--') || lineUpper.includes('UPDATE ') || lineUpper.includes('DELETE ')) {
+            continue;
+        }
+        
+        // Regex to find FROM or JOIN followed by table name
+        const regex = /(?:FROM|JOIN)\s+([a-zA-Z0-9_\[\]\.]+)/i;
+        const match = line.match(regex);
+        
+        if (match) {
+            // If it DOESN'T contain NOLOCK or similar valid hint already
+            if (!lineUpper.includes('NOLOCK') && !lineUpper.includes('WITH UR') && dialect !== 'Oracle' && dialect !== 'SQLite') {
+                findings.push({
+                    lineNum: i + 1,
+                    original: line,
+                    table: match[1]
+                });
+            }
+        }
+    }
+    
+    await sleep(400); // Tiny pause for effect
+    
+    appendToTerminal(`<div class="log-header">## SUMMARY</div>`);
+    appendToTerminal(`<div class="sys-msg">- SQL Dialect     : ${dialect}</div>`);
+    appendToTerminal(`<div class="sys-msg">- Total Lines     : ${lines.length}</div>`);
+    appendToTerminal(`<div class="sys-msg">- Missing NOLOCK  : <span style="color:#f85149; font-weight:bold;">${findings.length}</span></div>`);
+    
+    if (findings.length > 0) {
+        appendToTerminal(`<div class="log-header">## FINDINGS</div>`);
+        findings.forEach((finding, idx) => {
+            appendToTerminal(`<div class="log-error">Finding #${idx + 1}</div>`);
+            appendToTerminal(`<div class="sys-msg">- Line        : ${finding.lineNum}</div>`);
+            appendToTerminal(`<div class="sys-msg">- Table       : ${finding.table}</div>`);
             appendToTerminal(`<div class="sys-msg">- Severity    : MISSING NOLOCK</div>`);
             appendToTerminal(`<div class="sys-msg">- Suggested Fix :</div>`);
             
-            const mockOriginal = "SELECT * FROM Users u";
-            const mockFixed = `SELECT * FROM Users u ${nolockReplacement}`; // Simplified mock
+            // Suggestion: just append the hint roughly after table name
+            const fixedLine = finding.original.replace(finding.table, `${finding.table} ${nolockReplacement}`);
             
-            appendToTerminal(`<div class="diff-del">- ${mockOriginal}</div>`);
-            appendToTerminal(`<div class="diff-add">+ ${mockFixed}</div>`);
-            
-            await sleep(500);
-            appendToTerminal(`<div class="log-header">## STATUS</div>`);
-            appendToTerminal(`<div class="log-success">Scan Complete.</div>`);
-            
-            // Revert button
-            scanBtn.disabled = false;
-            scanBtn.innerHTML = '<span class="btn-content"><i class="fa-solid fa-radar"></i> INITIATE SCAN</span>';
+            // Make the old line clickable!
+            appendToTerminal(`<div class="diff-del" style="cursor:pointer;" onclick="window.scrollToLine(${finding.lineNum})" title="Click to highlight line in editor">- ${finding.original}</div>`);
+            appendToTerminal(`<div class="diff-add">+ ${fixedLine}</div><br>`);
         });
-    });
+    } else {
+        appendToTerminal(`<div class="log-success" style="margin-top:20px">[OK] No missing NOLOCK hints detected!</div>`);
+    }
+    
+    scanBtn.disabled = false;
+    scanBtn.innerHTML = '<span class="btn-content"><i class="fa-solid fa-radar"></i> INITIATE SCAN</span>';
 });
