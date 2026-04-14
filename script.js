@@ -284,16 +284,9 @@ window.highlightTableFromRef = function (idx) {
     for (let i = 0; i < finding.lineNum - 1; i++) startPos += lines[i].length + 1;
 
     const lineText = lines[finding.lineNum - 1] || '';
-    let selStart = startPos;
-    let selEnd   = startPos + lineText.length;
-
-    const safe  = finding.table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = lineText.match(new RegExp(`\\b(?:FROM|JOIN)\\b\\s+(${safe})`, 'i'));
-    if (match) {
-        const off = match.index + match[0].length - match[1].length;
-        selStart  = startPos + off;
-        selEnd    = selStart + match[1].length;
-    }
+    // Select the ENTIRE line so user clearly sees which line is flagged
+    const selStart = startPos;
+    const selEnd   = startPos + lineText.length;
 
     sqlInput.focus();
     setTimeout(() => {
