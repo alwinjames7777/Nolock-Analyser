@@ -148,20 +148,48 @@ document.getElementById('sql-file').addEventListener('change', function(e) {
 });
 
 // Line Jumping Logic
-window.scrollToLine = function(lineNum) {
+window.highlightTable = function(lineNum, tableName) {
     const lines = textarea.value.split('\n');
+    if (lineNum < 1 || lineNum > lines.length) return;
+    
     let startPos = 0;
     for (let i = 0; i < lineNum - 1; i++) {
         startPos += lines[i].length + 1;
     }
-    let endPos = startPos + lines[lineNum - 1].length;
+    
+    const lineText = lines[lineNum - 1];
+    
+    let tableStart = startPos;
+    let tableEnd = startPos + lineText.length;
+    
+    if (tableName) {
+        const safeTableForRegex = tableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const tableRegex = new RegExp(`\\b(?:FROM|JOIN)\\b\\s+(${safeTableForRegex})`, 'i');
+        const match = lineText.match(tableRegex);
+        
+        if (match) {
+            tableStart = startPos + match.index + match[0].lastIndexOf(match[1]);
+            tableEnd = tableStart + match[1].length;
+        } else {
+            const fallbackIdx = lineText.toUpperCase().indexOf(tableName.toUpperCase());
+            if(fallbackIdx !== -1) {
+                tableStart = startPos + fallbackIdx;
+                tableEnd = tableStart + tableName.length;
+            }
+        }
+    }
     
     textarea.focus();
-    textarea.setSelectionRange(startPos, endPos);
+    textarea.setSelectionRange(tableStart, tableEnd);
     
-    // Crude scroll height calculation
     const lineHeight = 24;
-    textarea.scrollTop = Math.max(0, (lineNum - 3) * lineHeight);
+    textarea.scrollTop = Math.max(0, (lineNum - 4) * lineHeight);
+};
+
+window.highlightTableFromRef = function(idx) {
+    if (!window.latestFindings || !window.latestFindings[idx]) return;
+    const finding = window.latestFindings[idx];
+    window.highlightTable(finding.lineNum, finding.table);
 };
 
 // Real Scan Logic
@@ -183,6 +211,15 @@ form.addEventListener('submit', async (e) => {
     
     const lines = script.split('\n');
     let findings = [];
+    window.latestFindings = findings;
+    
+    // Pre-pass: extract CTE definitions to skip them
+    let cteNames = new Set();
+    const cteRegex = /\b(?:WITH|,)\s+([a-zA-Z0-9_]+)\s+AS\s*\(/gi;
+    let cteMatch;
+    while ((cteMatch = cteRegex.exec(script)) !== null) {
+        cteNames.add(cteMatch[1].toUpperCase());
+    }
     
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i];
@@ -193,23 +230,31 @@ form.addEventListener('submit', async (e) => {
             continue;
         }
         
-        // Regex to find FROM or JOIN followed by table name
-        const regex = /(?:FROM|JOIN)\s+([a-zA-Z0-9_\[\]\.]+)/i;
+        // Regex to find FROM or JOIN followed by table name (ensuring FROM/JOIN is a distinct word)
+        const regex = /\b(?:FROM|JOIN)\b\s+([a-zA-Z0-9_\[\]\.]+)/i;
         const match = line.match(regex);
         
         if (match) {
+            const potentialTable = match[1];
+            const potTableUpper = potentialTable.toUpperCase();
+            
+            // Skip if table name is a CTE, a temp table (#), or table var (@)
+            if (cteNames.has(potTableUpper) || potTableUpper.startsWith('#') || potTableUpper.startsWith('@')) {
+                continue;
+            }
+            
             // If it DOESN'T contain NOLOCK or similar valid hint already
             if (!lineUpper.includes('NOLOCK') && !lineUpper.includes('WITH UR') && dialect !== 'Oracle' && dialect !== 'SQLite') {
                 findings.push({
                     lineNum: i + 1,
                     original: line,
-                    table: match[1]
+                    table: potentialTable
                 });
             }
         }
     }
     
-    await sleep(400); // Tiny pause for effect
+    await sleep(400);
     
     appendToTerminal(`<div class="log-header">## SUMMARY</div>`);
     appendToTerminal(`<div class="sys-msg">- SQL Dialect     : ${dialect}</div>`);
@@ -225,11 +270,10 @@ form.addEventListener('submit', async (e) => {
             appendToTerminal(`<div class="sys-msg">- Severity    : MISSING NOLOCK</div>`);
             appendToTerminal(`<div class="sys-msg">- Suggested Fix :</div>`);
             
-            // Suggestion: just append the hint roughly after table name
             const fixedLine = finding.original.replace(finding.table, `${finding.table} ${nolockReplacement}`);
             
-            // Make the old line clickable!
-            appendToTerminal(`<div class="diff-del" style="cursor:pointer;" onclick="window.scrollToLine(${finding.lineNum})" title="Click to highlight line in editor">- ${finding.original}</div>`);
+            // Exact Table Highlighting!
+            appendToTerminal(`<div class="diff-del" style="cursor:pointer;" onclick="window.highlightTableFromRef(${idx})" title="Click to highlight exactly the missing table">- ${finding.original}</div>`);
             appendToTerminal(`<div class="diff-add">+ ${fixedLine}</div><br>`);
         });
     } else {
