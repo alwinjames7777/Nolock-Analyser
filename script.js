@@ -177,18 +177,30 @@ window.applyNolock = function(idx) {
 //  APPLY FIX — OPTIMISE
 // ═══════════════════════════════════════════════════════
 window.applyOptimise = function(idx) {
-    const f = window.latestOptFindings && window.latestOptFindings[idx]; if(!f||!f.fix) return;
-    if (!f.autoFix) {
-        navigator.clipboard.writeText(f.fix).catch(()=>{});
-        const btn = document.getElementById(`opt-apply-${idx}`);
-        if(btn){btn.classList.add('applied');btn.innerHTML='<i class="fa-solid fa-copy"></i> COPIED';btn.disabled=true;}
-        return;
-    }
-    const lines = sqlInput.value.split('\n'); if(f.lineNum > lines.length) return;
-    lines[f.lineNum-1] = f.fix;
-    sqlInput.value = lines.join('\n'); updateLineNumbers();
+    const f = window.latestOptFindings && window.latestOptFindings[idx];
+    if (!f) return;
     const btn = document.getElementById(`opt-apply-${idx}`);
-    if(btn){btn.classList.add('applied');btn.innerHTML='<i class="fa-solid fa-check"></i> APPLIED';btn.disabled=true;}
+
+    if (f.autoFix) {
+        // Directly replace the flagged line in the editor
+        const lines = sqlInput.value.split('\n');
+        if (f.lineNum <= lines.length) {
+            lines[f.lineNum - 1] = f.fix;
+            sqlInput.value = lines.join('\n');
+            updateLineNumbers();
+        }
+        if (btn) { btn.classList.add('applied'); btn.innerHTML = '<i class="fa-solid fa-check"></i> APPLIED'; btn.disabled = true; }
+    } else {
+        // Insert suggestion as a comment on the line above
+        const lines = sqlInput.value.split('\n');
+        if (f.lineNum <= lines.length) {
+            const comment = `-- ⚡ SUGGESTION: ${f.fix}`;
+            lines.splice(f.lineNum - 1, 0, comment);
+            sqlInput.value = lines.join('\n');
+            updateLineNumbers();
+        }
+        if (btn) { btn.classList.add('applied'); btn.innerHTML = '<i class="fa-solid fa-check"></i> INSERTED'; btn.disabled = true; }
+    }
 };
 
 // ═══════════════════════════════════════════════════════
@@ -255,8 +267,7 @@ function runOptimiseScan(script) {
             label: 'SELECT * Usage',
             category: 'Performance',
             regex: /\bSELECT\s+\*/i,
-            message: 'Avoid SELECT * — specify only the columns you need. This reduces network I/O and prevents issues if the table schema changes.',
-            fix: line => null, // can't auto-fix
+            fix: () => 'Specify only required columns instead of SELECT *',
             autoFix: false,
         },
         {
@@ -264,8 +275,7 @@ function runOptimiseScan(script) {
             label: 'CURSOR Usage',
             category: 'Anti-Pattern',
             regex: /\bDECLARE\s+\w+\s+CURSOR\b/i,
-            message: 'CURSORs are slow — consider replacing with a set-based UPDATE/INSERT using a CTE or window functions.',
-            fix: line => null,
+            fix: () => 'Replace CURSOR with a set-based UPDATE/INSERT using a CTE or window functions',
             autoFix: false,
         },
         {
@@ -273,8 +283,7 @@ function runOptimiseScan(script) {
             label: 'Leading Wildcard LIKE',
             category: 'Index',
             regex: /\bLIKE\s+'%[^']+'/i,
-            message: "LIKE '%value' cannot use an index (full table scan). Reverse the search or use Full-Text Search.",
-            fix: line => null,
+            fix: () => "LIKE '%value' causes full table scan — consider Full-Text Search or reverse the pattern",
             autoFix: false,
         },
         {
@@ -282,8 +291,7 @@ function runOptimiseScan(script) {
             label: 'NOT IN with Subquery',
             category: 'Performance',
             regex: /\bNOT\s+IN\s*\(\s*SELECT\b/i,
-            message: 'NOT IN with subquery is slow and NULL-unsafe. Replace with NOT EXISTS or LEFT JOIN ... WHERE key IS NULL.',
-            fix: line => null,
+            fix: () => 'Replace NOT IN (SELECT...) with NOT EXISTS(...) or LEFT JOIN ... WHERE key IS NULL',
             autoFix: false,
         },
         {
@@ -291,8 +299,7 @@ function runOptimiseScan(script) {
             label: 'Function on Indexed Column',
             category: 'Sargability',
             regex: /\bWHERE\b.*\b(YEAR|MONTH|DAY|LEFT|RIGHT|LOWER|UPPER|CONVERT|CAST)\s*\([^)]+\)\s*(=|>|<|>=|<=)/i,
-            message: 'Applying a function to a column in WHERE makes the query non-sargable (cannot use index). Rewrite to compare raw column value.',
-            fix: line => null,
+            fix: () => 'Rewrite WHERE to compare raw column value — avoid wrapping the column in a function',
             autoFix: false,
         },
         {
@@ -300,26 +307,34 @@ function runOptimiseScan(script) {
             label: 'Excessive DISTINCT',
             category: 'Performance',
             regex: /\bSELECT\s+DISTINCT\b/i,
-            message: 'DISTINCT forces a sort/dedup pass. If you need distinct rows, verify your JOINs are not creating duplicates first.',
-            fix: line => null,
+            fix: () => 'Check if JOINs are creating duplicates — fix the JOIN instead of using DISTINCT',
             autoFix: false,
         },
         {
             id: 'MISSING_WHERE_UPDATE',
             label: 'UPDATE Without WHERE',
             category: '⚠ Danger',
-            regex: /^\s*UPDATE\s+\S+\s+SET\b(?![\s\S]*\bWHERE\b)/i,
-            message: 'UPDATE statement detected without a WHERE clause — this will update ALL rows!',
-            fix: line => null,
+            // Only flag if no WHERE, JOIN, or FROM appears within the next 10 lines
+            regex: /^\s*UPDATE\b/i,
+            checkFn: (allLines, lineIdx) => {
+                const block = allLines.slice(lineIdx, lineIdx + 12).join(' ');
+                const hasWhere = /\bWHERE\b/i.test(block);
+                const hasJoin  = /\b(JOIN|FROM)\b/i.test(block.replace(/^[^\n]+/, ''));
+                return !hasWhere && !hasJoin;
+            },
+            fix: () => 'Add a WHERE clause or verify the JOIN provides row filtering',
             autoFix: false,
         },
         {
             id: 'MISSING_WHERE_DELETE',
             label: 'DELETE Without WHERE',
             category: '⚠ Danger',
-            regex: /^\s*DELETE\s+(FROM\s+)?\S+(?![\s\S]*\bWHERE\b)/i,
-            message: 'DELETE statement detected without a WHERE clause — this will delete ALL rows!',
-            fix: line => null,
+            regex: /^\s*DELETE\b/i,
+            checkFn: (allLines, lineIdx) => {
+                const block = allLines.slice(lineIdx, lineIdx + 8).join(' ');
+                return !/\bWHERE\b/i.test(block) && !/\bJOIN\b/i.test(block);
+            },
+            fix: () => 'Add a WHERE clause to limit which rows are deleted',
             autoFix: false,
         },
         {
@@ -327,8 +342,7 @@ function runOptimiseScan(script) {
             label: 'Potential Implicit Conversion',
             category: 'Sargability',
             regex: /\bWHERE\b.*=\s*\d+/i,
-            message: 'Comparing a potentially varchar column with an unquoted number causes implicit type conversion, which prevents index use. Verify data types match.',
-            fix: line => null,
+            fix: () => 'Ensure column and value data types match to avoid implicit conversion blocking index use',
             autoFix: false,
         },
         {
@@ -337,8 +351,7 @@ function runOptimiseScan(script) {
             category: 'Performance',
             regex: /^\s*(?:CREATE|ALTER)\s+(?:PROC|PROCEDURE)\b/i,
             checkFn: (allLines) => !/SET\s+NOCOUNT\s+ON/i.test(allLines.join('\n')),
-            message: 'Add SET NOCOUNT ON at the start of stored procedures to suppress "rows affected" messages and reduce network traffic.',
-            fix: line => 'SET NOCOUNT ON;',
+            fix: () => 'SET NOCOUNT ON;',
             autoFix: false,
         },
     ];
@@ -346,25 +359,18 @@ function runOptimiseScan(script) {
     for (let i = 0; i < cleanLines.length; i++) {
         const line = cleanLines[i];
         for (const check of checks) {
-            if (check.checkFn) {
-                // whole-script check — only report on the matching line
-                if (!check.regex.test(line)) continue;
-                if (!check.checkFn(cleanLines)) continue;
-            } else {
-                if (!check.regex.test(line)) continue;
-            }
+            if (!check.regex.test(line)) continue;
+            if (check.checkFn && !check.checkFn(cleanLines, i)) continue;
 
-            const fixedText = check.fix ? check.fix(line) : null;
             findings.push({
-                lineNum: i + 1,
+                lineNum:  i + 1,
                 original: lines[i],
-                label: check.label,
+                label:    check.label,
                 category: check.category,
-                message: check.message,
-                fix: fixedText,
-                autoFix: check.autoFix,
+                fix:      check.fix(line),
+                autoFix:  check.autoFix,
             });
-            break; // one finding per check per line
+            break;
         }
     }
     return findings;
@@ -472,13 +478,13 @@ async function runOptimiseReport(script) {
 
     appendToTerminal(`<div class="log-header" style="color:#fbbf24">## FINDINGS <small style="color:var(--text-muted);font-weight:normal;font-size:0.74rem">— click yellow line to jump</small></div>`);
     findings.forEach((f, idx) => {
-        const btnLabel = f.autoFix ? '<i class="fa-solid fa-wrench"></i> APPLY' : '<i class="fa-solid fa-copy"></i> COPY FIX';
-        const fixBlock = f.fix
-            ? `<div class="opt-fix-row">
+        const btnLabel = f.autoFix
+            ? '<i class="fa-solid fa-wrench"></i> APPLY'
+            : '<i class="fa-solid fa-comment"></i> INSERT';
+        const fixBlock = `<div class="opt-fix-row">
                     <div class="opt-suggestion">${esc(f.fix)}</div>
                     <button class="btn-opt-apply" id="opt-apply-${idx}" onclick="window.applyOptimise(${idx})">${btnLabel}</button>
-               </div>`
-            : `<div class="opt-suggestion" style="color:var(--text-muted);font-style:italic">${esc(f.message)}</div>`;
+               </div>`;
 
         appendToTerminal(`
             <div class="opt-card">
