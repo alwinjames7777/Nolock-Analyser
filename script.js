@@ -181,25 +181,24 @@ window.applyOptimise = function(idx) {
     if (!f) return;
     const btn = document.getElementById(`opt-apply-${idx}`);
 
+    const lines = sqlInput.value.split('\n');
+    if (f.lineNum > lines.length) return;
+
     if (f.autoFix) {
-        // Directly replace the flagged line in the editor
-        const lines = sqlInput.value.split('\n');
-        if (f.lineNum <= lines.length) {
-            lines[f.lineNum - 1] = f.fix;
-            sqlInput.value = lines.join('\n');
-            updateLineNumbers();
-        }
-        if (btn) { btn.classList.add('applied'); btn.innerHTML = '<i class="fa-solid fa-check"></i> APPLIED'; btn.disabled = true; }
+        // Directly replace or modify the flagged line
+        lines[f.lineNum - 1] = f.fix;
     } else {
-        // Insert suggestion as a comment on the line above
-        const lines = sqlInput.value.split('\n');
-        if (f.lineNum <= lines.length) {
-            const comment = `-- ⚡ SUGGESTION: ${f.fix}`;
-            lines.splice(f.lineNum - 1, 0, comment);
-            sqlInput.value = lines.join('\n');
-            updateLineNumbers();
-        }
-        if (btn) { btn.classList.add('applied'); btn.innerHTML = '<i class="fa-solid fa-check"></i> INSERTED'; btn.disabled = true; }
+        // Prepend the suggestion as a comment right on top of the line
+        lines[f.lineNum - 1] = `-- ⚡ SUGGESTION: ${f.fixLabel || f.fix}\n` + lines[f.lineNum - 1];
+    }
+    
+    sqlInput.value = lines.join('\n');
+    updateLineNumbers();
+    
+    if (btn) { 
+        btn.classList.add('applied'); 
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> APPLIED'; 
+        btn.disabled = true; 
     }
 };
 
@@ -310,21 +309,7 @@ function runOptimiseScan(script) {
             fix: () => 'Check if JOINs are creating duplicates — fix the JOIN instead of using DISTINCT',
             autoFix: false,
         },
-        {
-            id: 'MISSING_WHERE_UPDATE',
-            label: 'UPDATE Without WHERE',
-            category: '⚠ Danger',
-            // Only flag if no WHERE, JOIN, or FROM appears within the next 10 lines
-            regex: /^\s*UPDATE\b/i,
-            checkFn: (allLines, lineIdx) => {
-                const block = allLines.slice(lineIdx, lineIdx + 12).join(' ');
-                const hasWhere = /\bWHERE\b/i.test(block);
-                const hasJoin  = /\b(JOIN|FROM)\b/i.test(block.replace(/^[^\n]+/, ''));
-                return !hasWhere && !hasJoin;
-            },
-            fix: () => 'Add a WHERE clause or verify the JOIN provides row filtering',
-            autoFix: false,
-        },
+
         {
             id: 'MISSING_WHERE_DELETE',
             label: 'DELETE Without WHERE',
@@ -518,11 +503,10 @@ async function runOptimiseReport(script) {
 
     appendToTerminal(`<div class="log-header" style="color:#fbbf24">## FINDINGS <small style="color:var(--text-muted);font-weight:normal;font-size:0.74rem">— click yellow line to jump</small></div>`);
     findings.forEach((f, idx) => {
-        const btnLabel = f.autoFix
-            ? '<i class="fa-solid fa-wrench"></i> APPLY'
-            : '<i class="fa-solid fa-comment"></i> INSERT';
+        // We will call the button APPLY regardless so the UX feels consistent
+        const btnLabel = '<i class="fa-solid fa-wrench"></i> APPLY';
         const fixBlock = `<div class="opt-fix-row">
-                    <div class="opt-suggestion">${esc(f.fix)}</div>
+                    <div class="opt-suggestion">${esc(f.fixLabel || f.fix)}</div>
                     <button class="btn-opt-apply" id="opt-apply-${idx}" onclick="window.applyOptimise(${idx})">${btnLabel}</button>
                </div>`;
 
