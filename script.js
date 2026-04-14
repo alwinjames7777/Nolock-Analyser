@@ -179,11 +179,15 @@ window.highlightTable = function(lineNum, tableName) {
         }
     }
     
-    textarea.focus();
+    textarea.focus({preventScroll: true});
     textarea.setSelectionRange(tableStart, tableEnd);
     
-    const lineHeight = 24;
-    textarea.scrollTop = Math.max(0, (lineNum - 4) * lineHeight);
+    // Perfectly center the found line vertically in the editor
+    const exactLinePos = (lineNum - 1) * 24;
+    textarea.scrollTop = Math.max(0, exactLinePos - (textarea.clientHeight / 2) + 12);
+    
+    // Sync line numbers immediately so they don't break
+    document.getElementById('line-numbers').scrollTop = textarea.scrollTop;
 };
 
 window.highlightTableFromRef = function(idx) {
