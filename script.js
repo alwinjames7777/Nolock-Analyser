@@ -354,6 +354,46 @@ function runOptimiseScan(script) {
             fix: () => 'SET NOCOUNT ON;',
             autoFix: false,
         },
+        {
+            id: 'COUNT_VS_EXISTS',
+            label: 'COUNT(*) Instead of EXISTS',
+            category: 'Performance',
+            regex: /\bCOUNT\s*\(\s*(?:\*|1)\s*\)\s*(?:>|>=|=)\s*0/i,
+            fix: () => 'Replace IF (SELECT COUNT(*) ...) > 0 with IF EXISTS(SELECT 1 ...) for faster early-exit evaluation',
+            autoFix: false,
+        },
+        {
+            id: 'ORDER_BY_NEWID',
+            label: 'ORDER BY NEWID()',
+            category: 'Performance',
+            regex: /\bORDER\s+BY\s+NEWID\s*\(\s*\)/i,
+            fix: () => 'ORDER BY NEWID() causes a huge sort operation. Consider alternative random sampling methods like TABLESAMPLE',
+            autoFix: false,
+        },
+        {
+            id: 'UNION_WITHOUT_ALL',
+            label: 'UNION without ALL',
+            category: 'Performance',
+            regex: /\bUNION\b(?!\s+ALL)/i,
+            fix: () => 'UNION implicitly sorts and removes duplicates. If duplicates are not possible, use UNION ALL instead',
+            autoFix: false,
+        },
+        {
+            id: 'ISNULL_IN_WHERE',
+            label: 'ISNULL or COALESCE in WHERE',
+            category: 'Sargability',
+            regex: /\bWHERE\b.*\b(?:ISNULL|COALESCE|NVL)\s*\(\s*[a-zA-Z0-9_.]+\s*,/i,
+            fix: () => 'Wrapping a column in ISNULL/COALESCE in WHERE prevents index usage. Use (Col = Val OR Col IS NULL)',
+            autoFix: false,
+        },
+        {
+            id: 'TABLE_VAR_VS_TEMP',
+            label: 'Table Variable Usage',
+            category: 'Performance',
+            regex: /\bDECLARE\s+@[a-zA-Z0-9_]+\s+(?:AS\s+)?TABLE\b/i,
+            fix: () => 'Table variables lack distribution statistics (assumes 1 row). For large datasets, use a Temp Table (#table)',
+            autoFix: false,
+        },
     ];
 
     for (let i = 0; i < cleanLines.length; i++) {

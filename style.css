@@ -352,4 +352,15 @@ select:focus { outline: none; border-color: var(--sky); box-shadow: 0 0 10px rgb
     .main-content { grid-template-columns: 1fr; }
     body { overflow-y: auto; height: auto; }
     .app-container { height: auto; }
+    
+    .mode-tabs {
+        flex-wrap: wrap;
+    }
+    .mode-tab {
+        flex: 1 1 45%;
+    }
+    .btn-scan {
+        flex: 1 1 100%;
+        margin-top: 5px;
+    }
 }
