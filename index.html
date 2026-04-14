@@ -4,21 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NOLOCK Analyser // Anti-Gravity SQL Scan</title>
-    <meta name="description" content="Elite SQL static analysis engine with anti-gravity precision">
+    <meta name="description" content="SQL static analysis engine — detect missing NOLOCK hints with precision">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <div id="particles-js"></div>
+    <!-- 3D Database Animation Canvas -->
+    <canvas id="bgCanvas"></canvas>
 
+    <div class="app-container">
         <header class="navbar">
             <div class="logo-container">
-                <img src="assets/logo.png" alt="NOLOCK Analyser Logo" class="logo-img">
+                <div class="logo-icon"><i class="fa-solid fa-database"></i></div>
                 <div class="logo-text">
-                    <h1>NOLOCK <span class="highlight-cyan">ANALYSER</span></h1>
-                    <p class="tagline">Elite SQL Static Analysis Engine</p>
+                    <h1>NOLOCK <span class="highlight-sky">ANALYSER</span></h1>
+                    <p class="tagline">SQL Static Analysis Engine</p>
                 </div>
             </div>
             <div class="system-status">
@@ -29,10 +30,10 @@
 
         <main class="main-content">
 
-            <!-- LEFT: Editor -->
+            <!-- LEFT: SQL Editor -->
             <section class="glass-panel input-section">
                 <div class="panel-header">
-                    <h2><i class="fa-solid fa-code"></i> TARGET PARAMETERS</h2>
+                    <h2><i class="fa-solid fa-code"></i> SQL</h2>
                     <div class="panel-actions">
                         <input type="file" id="sql-file" accept=".sql,.txt" style="display:none;">
                         <label for="sql-file" class="btn-upload"><i class="fa-solid fa-file-import"></i> UPLOAD</label>
@@ -43,8 +44,8 @@
                 </div>
 
                 <form id="analyzer-form">
-                    <div class="form-group">
-                        <label for="sql-dialect">[ SQL Dialect ]</label>
+                    <div class="form-group dialect-group">
+                        <label for="sql-dialect">[ Dialect ]</label>
                         <select id="sql-dialect" required>
                             <option value="" disabled selected>Select Dialect...</option>
                             <option value="T-SQL">T-SQL</option>
@@ -57,17 +58,16 @@
                     </div>
 
                     <div class="form-group editor-group">
-                        <label>[ SQL Payload ]</label>
                         <div class="editor-container">
                             <div id="lineNumbers" class="line-numbers">1</div>
                             <textarea id="sqlInput" wrap="off" spellcheck="false"
-                                placeholder="-- Paste or upload your SQL here...&#10;SELECT * FROM dbo.Users;"></textarea>
+                                placeholder="-- Paste or upload SQL here...&#10;SELECT * FROM dbo.Users;"></textarea>
                         </div>
                     </div>
                 </form>
             </section>
 
-            <!-- RIGHT: Results -->
+            <!-- RIGHT: Analysis Report -->
             <section class="glass-panel output-section">
                 <div class="panel-header">
                     <h2><i class="fa-solid fa-terminal"></i> ANALYSIS REPORT</h2>
@@ -90,7 +90,6 @@
         </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
