@@ -31,16 +31,18 @@
             
             <!-- Left Column: Input Form -->
             <section class="glass-panel input-section">
-                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem;">
+                <div class="panel-header">
                     <h2><i class="fa-solid fa-code"></i> TARGET PARAMETERS</h2>
-                    <button type="submit" class="btn-scan" id="scan-btn" form="analyzer-form" style="margin-top: 0; padding: 10px 20px;">
-                        <span class="btn-content">
-                            <i class="fa-solid fa-radar"></i> SCAN
-                        </span>
-                    </button>
+                    <div class="panel-header-actions">
+                        <input type="file" id="sql-file" accept=".sql,.txt" style="display:none;">
+                        <label for="sql-file" class="btn-upload"><i class="fa-solid fa-file-import"></i> UPLOAD FILE</label>
+                        <button type="submit" class="btn-scan" id="scan-btn" form="analyzer-form">
+                            <span class="btn-content"><i class="fa-solid fa-radar"></i> SCAN</span>
+                        </button>
+                    </div>
                 </div>
-                <form id="analyzer-form" style="display: flex; flex-direction: column; flex: 1; height: 100%;">
-                    <div class="form-group" style="margin-bottom: 1rem;">
+                <form id="analyzer-form">
+                    <div class="form-group dialect-group">
                         <label for="sql-dialect">[ SQL Dialect ]</label>
                         <div class="select-wrapper">
                             <select id="sql-dialect" required>
@@ -55,32 +57,34 @@
                         </div>
                     </div>
 
-                    <div class="form-group" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
-                        <label for="sql-script" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span>[ SQL Payload ]</span>
-                            <span>
-                                <input type="file" id="sql-file" accept=".sql,.txt" style="display:none;">
-                                <label for="sql-file" style="cursor:pointer; color: var(--accent-purple); font-size: 0.8rem; margin: 0;"><i class="fa-solid fa-file-import"></i> UPLOAD FILE</label>
-                            </span>
-                        </label>
-                        <div class="editor-wrapper">
-                            <div class="line-numbers" id="line-numbers">1</div>
-                            <textarea id="sql-script" wrap="off" placeholder="-- Initialize script here...\nSELECT * FROM dbo.Users;" spellcheck="false" required></textarea>
+                    <div class="form-group editor-group">
+                        <label>[ SQL Payload ]</label>
+                        <!-- Code editor: hidden textarea + visible rendered lines -->
+                        <div class="code-editor" id="code-editor">
+                            <div class="code-gutter" id="code-gutter"></div>
+                            <div class="code-lines" id="code-lines">
+                                <div class="code-line" data-line="1"><span class="line-content"></span></div>
+                            </div>
+                            <!-- Hidden real textarea that captures typing -->
+                            <textarea id="sql-script" class="sql-hidden-textarea" wrap="off" spellcheck="false" required
+                                      placeholder="-- Paste or upload your SQL here...&#10;SELECT * FROM dbo.Users;"></textarea>
                         </div>
                     </div>
                 </form>
             </section>
 
-            <!-- Right Column: Results & output -->
+            <!-- Right Column: Results -->
             <section class="glass-panel output-section">
                 <div class="panel-header">
                     <h2><i class="fa-solid fa-terminal"></i> ANALYSIS REPORT</h2>
+                    <span id="missing-badge" class="missing-badge" style="display:none;">0 MISSING</span>
                 </div>
                 <div class="terminal-window" id="terminal-window">
                     <div class="terminal-header">
                         <span class="dot dot-red"></span>
                         <span class="dot dot-yellow"></span>
                         <span class="dot dot-green"></span>
+                        <span class="terminal-label">nolock_analyser.exe</span>
                     </div>
                     <div class="terminal-body" id="terminal-output">
                         <div class="sys-msg">&gt; NOLOCK Analyser awaiting payload...</div>
@@ -92,7 +96,6 @@
         </main>
     </div>
     
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="script.js"></script>
 </body>
