@@ -46,44 +46,54 @@ document.getElementById('sql-file').addEventListener('change', function (e) {
     reader.readAsText(file);
 });
 
-// ─── Jump & Highlight ─────────────────────────────────────────────────────────
-// This uses the EXACT same technique as the reference site:
-// 1. Calculate character offsets for the table name inside the textarea value
-// 2. Call setSelectionRange(start, end) — browser selects + AUTOMATICALLY scrolls it into view
-// 3. Call focus() — selection becomes visible with the browser's selection colour
+// ─── Jump & Highlight (exact same technique as reference site) ───────────────
+// Key insight from reference: focus() first, then inside setTimeout(0),
+// setSelectionRange AND scrollTop are both set — scrollTop runs AFTER
+// the browser's own cursor-scroll, so it wins.
 window.highlightTableFromRef = function (idx) {
     const finding = window.latestFindings && window.latestFindings[idx];
     if (!finding) return;
 
     const lines = sqlInput.value.split('\n');
+    if (finding.lineNum < 1 || finding.lineNum > lines.length) return;
 
-    // Build char offset to start of target line
-    let lineStart = 0;
+    // Build char offset for the start of the target line
+    let startPos = 0;
     for (let i = 0; i < finding.lineNum - 1; i++) {
-        lineStart += lines[i].length + 1; // +1 for \n
+        startPos += lines[i].length + 1; // +1 for \n
     }
 
     const lineText = lines[finding.lineNum - 1] || '';
 
-    // Find the specific table name after FROM/JOIN within this line
-    let selStart = lineStart;
-    let selEnd   = lineStart + lineText.length; // fallback: whole line
+    // Find the exact table name after FROM/JOIN within the line
+    let selStart = startPos;
+    let selEnd   = startPos + lineText.length; // fallback: whole line
 
     const safeTable  = finding.table.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const tableRegex = new RegExp(`\\b(?:FROM|JOIN)\\b\\s+(${safeTable})`, 'i');
     const match      = lineText.match(tableRegex);
-
     if (match) {
         const tableOffset = match.index + match[0].length - match[1].length;
-        selStart = lineStart + tableOffset;
+        selStart = startPos + tableOffset;
         selEnd   = selStart + match[1].length;
     }
 
-    // *** THE CORRECT APPROACH (matches reference site) ***
-    // focus first so selection is visible, then setSelectionRange.
-    // The browser will automatically scroll the selection into view — no manual scrollTop!
+    // Step 1: focus first (makes selection visible)
     sqlInput.focus();
-    sqlInput.setSelectionRange(selStart, selEnd);
+
+    // Step 2: in next tick (setTimeout 0), set selection AND override scrollTop
+    // This is the EXACT pattern from the reference site — scrollTop set AFTER
+    // setSelectionRange so it overrides the browser's own cursor-scroll
+    setTimeout(() => {
+        sqlInput.setSelectionRange(selStart, selEnd);
+
+        // Line height = CSS --code-line-height = 21px
+        const targetScroll = (finding.lineNum - 1) * 21;
+        sqlInput.scrollTop = targetScroll - (sqlInput.clientHeight / 4);
+
+        // Sync line numbers
+        lineNumbers.scrollTop = sqlInput.scrollTop;
+    }, 0);
 };
 
 // ─── Apply Fix ────────────────────────────────────────────────────────────────
