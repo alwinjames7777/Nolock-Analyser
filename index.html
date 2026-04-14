@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOLOCK Analyser // Anti-Gravity SQL Scan</title>
-    <meta name="description" content="SQL static analysis engine — detect missing NOLOCK hints with precision">
+    <title>SQL Analyser</title>
+    <meta name="description" content="SQL static analysis engine — NOLOCK scan and procedure optimisation">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 3D Database Animation Canvas -->
     <canvas id="bgCanvas"></canvas>
 
     <div class="app-container">
@@ -18,7 +17,7 @@
             <div class="logo-container">
                 <div class="logo-icon"><i class="fa-solid fa-database"></i></div>
                 <div class="logo-text">
-                    <h1>NOLOCK <span class="highlight-sky">ANALYSER</span></h1>
+                    <h1>SQL <span class="highlight-sky">ANALYSER</span></h1>
                     <p class="tagline">SQL Static Analysis Engine</p>
                 </div>
             </div>
@@ -37,9 +36,6 @@
                     <div class="panel-actions">
                         <input type="file" id="sql-file" accept=".sql,.txt" style="display:none;">
                         <label for="sql-file" class="btn-upload"><i class="fa-solid fa-file-import"></i> UPLOAD</label>
-                        <button type="submit" form="analyzer-form" class="btn-scan" id="scan-btn">
-                            <span class="btn-content"><i class="fa-solid fa-radar"></i> SCAN</span>
-                        </button>
                     </div>
                 </div>
 
@@ -57,9 +53,22 @@
                         </select>
                     </div>
 
+                    <!-- Mode Tabs -->
+                    <div class="mode-tabs">
+                        <button type="button" class="mode-tab active" id="tab-nolock" onclick="setMode('nolock')">
+                            <i class="fa-solid fa-lock-open"></i> NOLOCK SCAN
+                        </button>
+                        <button type="button" class="mode-tab" id="tab-optimise" onclick="setMode('optimise')">
+                            <i class="fa-solid fa-bolt"></i> OPTIMISE
+                        </button>
+                        <button type="submit" class="btn-scan" id="scan-btn">
+                            <span class="btn-content"><i class="fa-solid fa-radar"></i> SCAN</span>
+                        </button>
+                    </div>
+
                     <div class="form-group editor-group">
                         <div class="editor-container">
-                            <div id="lineNumbers" class="line-numbers">1</div>
+                            <div id="lineNumbers" class="line-numbers"><div>1</div></div>
                             <textarea id="sqlInput" wrap="off" spellcheck="false"
                                 placeholder="-- Paste or upload SQL here...&#10;SELECT * FROM dbo.Users;"></textarea>
                         </div>
@@ -70,7 +79,7 @@
             <!-- RIGHT: Analysis Report -->
             <section class="glass-panel output-section">
                 <div class="panel-header">
-                    <h2><i class="fa-solid fa-terminal"></i> ANALYSIS REPORT</h2>
+                    <h2 id="report-title"><i class="fa-solid fa-lock-open"></i> NOLOCK REPORT</h2>
                     <span id="missing-badge" class="missing-badge" style="display:none;"></span>
                 </div>
                 <div class="terminal-window">
@@ -78,10 +87,10 @@
                         <span class="dot dot-red"></span>
                         <span class="dot dot-yellow"></span>
                         <span class="dot dot-green"></span>
-                        <span class="terminal-label">nolock_analyser.exe</span>
+                        <span class="terminal-label" id="terminal-label">sql_analyser.exe — nolock_mode</span>
                     </div>
                     <div class="terminal-body" id="terminal-output">
-                        <div class="sys-msg">&gt; NOLOCK Analyser awaiting payload...</div>
+                        <div class="sys-msg">&gt; SQL Analyser awaiting payload...</div>
                         <div class="sys-msg blink-cursor">_</div>
                     </div>
                 </div>

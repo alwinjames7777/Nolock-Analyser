@@ -133,7 +133,74 @@ select {
 }
 select:focus { outline: none; border-color: var(--sky); box-shadow: 0 0 10px rgba(56,189,248,0.25); }
 
-/* ── Buttons ───────────────────────────────────────── */
+/* ── Mode Tabs ────────────────────────────────────── */
+.mode-tabs {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 0.65rem; flex-shrink: 0;
+}
+.mode-tab {
+    flex: 1; padding: 7px 10px; border-radius: 7px;
+    border: 1px solid rgba(56,189,248,0.2);
+    background: rgba(56,189,248,0.05);
+    color: var(--text-muted);
+    font-family: var(--font-code); font-size: 0.78rem;
+    font-weight: bold; cursor: pointer; letter-spacing: 1px;
+    transition: all 0.25s; display: flex; align-items: center;
+    justify-content: center; gap: 7px; text-transform: uppercase;
+}
+.mode-tab:hover { border-color: var(--sky); color: var(--sky); background: rgba(56,189,248,0.1); }
+.mode-tab.active {
+    background: rgba(56,189,248,0.18); border-color: var(--sky);
+    color: var(--sky); box-shadow: 0 0 10px rgba(56,189,248,0.2);
+}
+.mode-tab.optimise-active {
+    background: rgba(251,191,36,0.15); border-color: #fbbf24;
+    color: #fbbf24; box-shadow: 0 0 10px rgba(251,191,36,0.2);
+}
+
+/* ── Optimise finding cards ────────────────────────── */
+.opt-card {
+    background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.2);
+    border-radius: 9px; margin: 8px 0; padding: 10px 12px;
+    transition: border-color 0.2s;
+}
+.opt-card:hover { border-color: rgba(251,191,36,0.45); }
+.opt-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.opt-title { color: #fbbf24; font-weight: bold; font-size: 0.82rem; }
+.opt-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35);
+    color: #fde68a; font-family: var(--font-code); font-size: 0.72rem;
+    padding: 2px 9px; border-radius: 20px; font-weight: bold;
+}
+.opt-meta { color: var(--text-muted); font-size: 0.76rem; margin-bottom: 7px; }
+.opt-snippet {
+    background: rgba(251,191,36,0.08); border-left: 3px solid #fbbf24;
+    padding: 5px 10px; border-radius: 0 4px 4px 0; margin-bottom: 6px;
+    font-size: 0.77rem; color: #fde68a; cursor: pointer;
+    word-break: break-all; transition: background 0.2s;
+    display: flex; align-items: flex-start; gap: 6px;
+}
+.opt-snippet:hover { background: rgba(251,191,36,0.18); color: #fff; }
+.opt-suggestion {
+    background: rgba(74,222,128,0.07); border-left: 3px solid #4ade80;
+    padding: 5px 10px; border-radius: 0 4px 4px 0;
+    font-size: 0.77rem; color: #b4f5be; word-break: break-all;
+}
+.opt-fix-row { display: flex; gap: 7px; align-items: flex-start; }
+.btn-opt-apply {
+    background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35);
+    color: #fbbf24; font-family: var(--font-code); font-size: 0.71rem;
+    padding: 5px 10px; border-radius: 6px; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+    display: flex; align-items: center; gap: 4px;
+}
+.btn-opt-apply:hover { background: rgba(251,191,36,0.25); border-color: #fbbf24; }
+.btn-opt-apply.applied { cursor: default; color: #4ade80; border-color: #4ade80; background: rgba(74,222,128,0.12); }
+
+/* log-warning colour */
+.log-warn { color: #fbbf24; font-weight: bold; }
+
 .btn-upload {
     cursor: pointer; color: var(--sky-bright);
     font-family: var(--font-code); font-size: 0.74rem;
