@@ -192,6 +192,33 @@ window.highlightTableFromRef = function(idx) {
     window.highlightTable(finding.lineNum, finding.table);
 };
 
+window.applySuggestion = function(idx) {
+    if (!window.latestFindings || !window.latestFindings[idx]) return;
+    const finding = window.latestFindings[idx];
+    
+    const lines = textarea.value.split('\n');
+    if (finding.lineNum > lines.length) return;
+    
+    let dialect = document.getElementById('sql-dialect').value;
+    let nolockReplacement = dialect === "DB2" ? "WITH UR" : "WITH (NOLOCK)";
+    
+    // Replace the specific table exactly to avoid breaking changes
+    let lineToFix = lines[finding.lineNum - 1];
+    lines[finding.lineNum - 1] = lineToFix.replace(finding.table, `${finding.table} ${nolockReplacement}`);
+    
+    textarea.value = lines.join('\n');
+    updateLineNumbers();
+    
+    const btn = document.getElementById(`apply-btn-${idx}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> APPLIED';
+        btn.style.background = 'rgba(63, 185, 80, 0.2)';
+        btn.style.color = '#4ade80';
+        btn.style.borderColor = '#4ade80';
+    }
+};
+
 // Real Scan Logic
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -274,12 +301,17 @@ form.addEventListener('submit', async (e) => {
             
             // Exact Table Highlighting!
             appendToTerminal(`<div class="diff-del" style="cursor:pointer;" onclick="window.highlightTableFromRef(${idx})" title="Click to highlight exactly the missing table">- ${finding.original}</div>`);
-            appendToTerminal(`<div class="diff-add">+ ${fixedLine}</div><br>`);
+            appendToTerminal(`
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
+                    <div class="diff-add" style="flex: 1;">+ ${fixedLine}</div>
+                    <button class="btn-scan" style="margin-top: 0; margin-left: 10px; padding: 5px 10px; font-size: 0.8rem; flex-shrink: 0;" id="apply-btn-${idx}" onclick="window.applySuggestion(${idx})"><i class="fa-solid fa-wrench"></i> APPLY</button>
+                </div>
+            `);
         });
     } else {
         appendToTerminal(`<div class="log-success" style="margin-top:20px">[OK] No missing NOLOCK hints detected!</div>`);
     }
     
     scanBtn.disabled = false;
-    scanBtn.innerHTML = '<span class="btn-content"><i class="fa-solid fa-radar"></i> INITIATE SCAN</span>';
+    scanBtn.innerHTML = '<span class="btn-content"><i class="fa-solid fa-radar"></i> SCAN</span>';
 });

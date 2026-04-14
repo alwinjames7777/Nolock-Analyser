@@ -23,7 +23,7 @@
             </div>
             <div class="system-status">
                 <span class="pulse"></span>
-                <span class="status-text">SYSTEM <span class="highlight-green">ONLINE</span></span>
+                <span class="status-text">ALWIN IS <span class="highlight-green">ANALYSING</span></span>
             </div>
         </header>
 
@@ -31,11 +31,16 @@
             
             <!-- Left Column: Input Form -->
             <section class="glass-panel input-section">
-                <div class="panel-header">
+                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 1rem;">
                     <h2><i class="fa-solid fa-code"></i> TARGET PARAMETERS</h2>
+                    <button type="submit" class="btn-scan" id="scan-btn" form="analyzer-form" style="margin-top: 0; padding: 10px 20px;">
+                        <span class="btn-content">
+                            <i class="fa-solid fa-radar"></i> SCAN
+                        </span>
+                    </button>
                 </div>
-                <form id="analyzer-form">
-                    <div class="form-group">
+                <form id="analyzer-form" style="display: flex; flex-direction: column; flex: 1; height: 100%;">
+                    <div class="form-group" style="margin-bottom: 1rem;">
                         <label for="sql-dialect">[ SQL Dialect ]</label>
                         <div class="select-wrapper">
                             <select id="sql-dialect" required>
@@ -50,8 +55,8 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="sql-script" style="display: flex; justify-content: space-between;">
+                    <div class="form-group" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
+                        <label for="sql-script" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                             <span>[ SQL Payload ]</span>
                             <span>
                                 <input type="file" id="sql-file" accept=".sql,.txt" style="display:none;">
@@ -63,12 +68,6 @@
                             <textarea id="sql-script" placeholder="-- Initialize script here...\nSELECT * FROM dbo.Users;" spellcheck="false" required></textarea>
                         </div>
                     </div>
-
-                    <button type="submit" class="btn-scan" id="scan-btn">
-                        <span class="btn-content">
-                            <i class="fa-solid fa-radar"></i> INITIATE SCAN
-                        </span>
-                    </button>
                 </form>
             </section>
 
