@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOLOCK Analyser // Anti-Gravity SQL Scan</title>
+    <meta name="description" content="Elite SQL static analysis engine with anti-gravity precision">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="particle-layer" id="particles-js"></div>
+        
+        <header class="navbar">
+            <div class="logo-container">
+                <img src="assets/logo.png" alt="NOLOCK Analyser Logo" class="logo-img">
+                <div class="logo-text">
+                    <h1>NOLOCK <span class="highlight-cyan">ANALYSER</span></h1>
+                    <p class="tagline">Elite SQL Static Analysis Engine</p>
+                </div>
+            </div>
+            <div class="system-status">
+                <span class="pulse"></span>
+                <span class="status-text">SYSTEM <span class="highlight-green">ONLINE</span></span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            
+            <!-- Left Column: Input Form -->
+            <section class="glass-panel input-section">
+                <div class="panel-header">
+                    <h2><i class="fa-solid fa-code"></i> TARGET PARAMETERS</h2>
+                </div>
+                <form id="analyzer-form">
+                    <div class="form-group">
+                        <label for="sql-dialect">[ SQL Dialect ]</label>
+                        <div class="select-wrapper">
+                            <select id="sql-dialect" required>
+                                <option value="" disabled selected>Select Dialect...</option>
+                                <option value="T-SQL">T-SQL</option>
+                                <option value="DB2">IBM DB2</option>
+                                <option value="PostgreSQL">PostgreSQL</option>
+                                <option value="MySQL">MySQL</option>
+                                <option value="Oracle">Oracle</option>
+                                <option value="SQLite">SQLite</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sql-script">[ SQL Payload ]</label>
+                        <div class="editor-wrapper">
+                            <div class="line-numbers" id="line-numbers">1</div>
+                            <textarea id="sql-script" placeholder="-- Initialize script here...\nSELECT * FROM dbo.Users;" spellcheck="false" required></textarea>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-scan" id="scan-btn">
+                        <span class="btn-content">
+                            <i class="fa-solid fa-radar"></i> INITIATE SCAN
+                        </span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Right Column: Results & output -->
+            <section class="glass-panel output-section">
+                <div class="panel-header">
+                    <h2><i class="fa-solid fa-terminal"></i> ANALYSIS REPORT</h2>
+                </div>
+                <div class="terminal-window" id="terminal-window">
+                    <div class="terminal-header">
+                        <span class="dot dot-red"></span>
+                        <span class="dot dot-yellow"></span>
+                        <span class="dot dot-green"></span>
+                    </div>
+                    <div class="terminal-body" id="terminal-output">
+                        <div class="sys-msg">&gt; NOLOCK Analyser awaiting payload...</div>
+                        <div class="sys-msg blink-cursor">_</div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
